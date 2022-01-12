@@ -1,5 +1,5 @@
-# Tor Relay Availability Checker
-================================
+Tor Relay Availability Checker
+==============================
 
 This small script downloads all Tor Relay IP addresses from [onionoo.torproject.org](https://onionoo.torproject.org/) and checks whether random Relays are available.
 
