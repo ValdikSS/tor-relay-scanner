@@ -38,12 +38,25 @@ class TCPSocketConnectChecker:
 
 
 class TorRelayGrabber:
-    def grab(self):
-        with requests.get(
-            "https://onionoo.torproject.org/details?type=relay&running=true&fields=fingerprint,or_addresses",
-            timeout=int(TIMEOUT),
-        ) as r:
+    def _grab(self, url):
+        with requests.get(url, timeout=int(TIMEOUT)) as r:
             return r.json()
+
+    def grab(self):
+        BASEURL = "https://onionoo.torproject.org/details?type=relay&running=true&fields=fingerprint,or_addresses"
+        # Use public CORS proxy as a regular proxy in case if onionoo.torproject.org is unreachable
+        URLS = (BASEURL,
+                "https://corsbypasser.herokuapp.com/" + BASEURL,
+                "https://corsanywhere.herokuapp.com/" + BASEURL,
+                "https://tauron.herokuapp.com/" + BASEURL)
+
+        for url in URLS:
+            try:
+                return self._grab(url)
+            except Exception as e:
+                print("Can't download Tor Relay data from/via {}: {}".format(
+                    urllib.parse.urlparse(url).hostname, e
+                ), file=sys.stderr)
 
     def grab_parse(self):
         return self.grab()["relays"]
