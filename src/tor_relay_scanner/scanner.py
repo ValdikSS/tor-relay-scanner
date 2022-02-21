@@ -106,9 +106,9 @@ class TorRelay:
 
 
 async def main_async():
-    NUM_RELAYS = 15
+    NUM_RELAYS = 30
     WORKING_RELAY_NUM_GOAL = 5
-    MAX_NUM_TRIES = 3
+    MAX_NUM_TRIES = 5
 
     print("Downloading Tor Relay information from onionoo.torproject.org…", file=sys.stderr)
     relays = TorRelayGrabber().grab_parse()
