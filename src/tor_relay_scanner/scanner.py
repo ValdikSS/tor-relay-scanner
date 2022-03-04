@@ -109,6 +109,8 @@ async def main_async():
     NUM_RELAYS = 30
     WORKING_RELAY_NUM_GOAL = 5
 
+    print(f"Tor Relay Scanner. Will scan up to {WORKING_RELAY_NUM_GOAL}" +
+          " working relays (or till the end)", file=sys.stderr)
     print("Downloading Tor Relay information from onionoo.torproject.org…", file=sys.stderr)
     relays = TorRelayGrabber().grab_parse()
     print("Done!", file=sys.stderr)
@@ -131,25 +133,25 @@ async def main_async():
             break
 
         print(
-            f"\nTry {ntry}, We'll test the following {NUM_RELAYS} random relays:", file=sys.stderr)
+            f"\nTry {ntry}/{numtries}, We'll test the following {NUM_RELAYS} random relays:", file=sys.stderr)
         for relay in test_relays:
             print(relay, file=sys.stderr)
         print("", file=sys.stderr)
 
-        print("Test started…", file=sys.stderr)
+        print(f"Already found {len(working_relays)} good relays. Test started…", file=sys.stderr)
         tasks = list()
         for relay in test_relays:
             tasks.append(asyncio.create_task(relay.check()))
         fin = await asyncio.gather(*tasks)
         print("", file=sys.stderr)
 
-        print("The following relays are reachable:", file=sys.stderr)
+        print("The following relays are reachable this try:", file=sys.stderr)
         for relay in test_relays:
             if relay:
                 print(relay)
                 working_relays.append(relay)
         if not any(test_relays):
-            print("No relays are reachable.", file=sys.stderr)
+            print("No relays are reachable this try.", file=sys.stderr)
 
     if ntry > 1:
         print("", file=sys.stderr)
