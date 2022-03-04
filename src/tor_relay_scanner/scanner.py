@@ -108,20 +108,28 @@ class TorRelay:
 async def main_async():
     NUM_RELAYS = 30
     WORKING_RELAY_NUM_GOAL = 5
-    MAX_NUM_TRIES = 5
 
     print("Downloading Tor Relay information from onionoo.torproject.org…", file=sys.stderr)
     relays = TorRelayGrabber().grab_parse()
     print("Done!", file=sys.stderr)
 
+    random.shuffle(relays)
     working_relays = list()
     ntry = 0
-    for ntry in range(MAX_NUM_TRIES):
+    relaypos = 0
+    numtries = round(len(relays) / NUM_RELAYS)
+    for ntry in range(numtries):
         if len(working_relays) >= WORKING_RELAY_NUM_GOAL:
             break
 
-        test_relays = [TorRelay(random.choice(relays))
-                       for x in range(NUM_RELAYS)]
+        relaynum = min(NUM_RELAYS, len(relays) - relaypos - 1)
+        test_relays = [TorRelay(relays[x])
+                       for x in range(relaypos, relaypos+relaynum)]
+        relaypos += NUM_RELAYS
+
+        if not test_relays:
+            break
+
         print(
             f"\nTry {ntry}, We'll test the following {NUM_RELAYS} random relays:", file=sys.stderr)
         for relay in test_relays:
