@@ -4,11 +4,12 @@ import asyncio
 import random
 import sys
 import urllib.parse
-
+import argparse
 import requests
 
 TIMEOUT = 10.0
 
+DESCRIPTION = "Downloads all Tor Relay IP addresses from onionoo.torproject.org and checks whether random Relays are available."
 
 class TCPSocketConnectChecker:
     def __init__(self, host, port, timeout=TIMEOUT):
@@ -105,9 +106,10 @@ class TorRelay:
         return bool(self.reachable)
 
 
-async def main_async():
-    NUM_RELAYS = 30
-    WORKING_RELAY_NUM_GOAL = 5
+async def main_async(args):
+    NUM_RELAYS = args.num_relays
+    WORKING_RELAY_NUM_GOAL = args.working_relay_num_goal
+    TIMEOUT = args.timeout
 
     print(f"Tor Relay Scanner. Will scan up to {WORKING_RELAY_NUM_GOAL}" +
           " working relays (or till the end)", file=sys.stderr)
@@ -164,4 +166,9 @@ async def main_async():
 
 
 def main():
-    asyncio.run(main_async())
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
+    parser.add_argument('-n', type=int, dest='num_relays', nargs='?', default=30, help='Choose the number of relays to test.')
+    parser.add_argument('-g', '--goal', type=int, dest='working_relay_num_goal', nargs='?', default=5, help='Choose the max number of relays to scan.')
+    parser.add_argument('--timeout', type=float, nargs='?', default=10.0)
+    args = parser.parse_args()
+    asyncio.run(main_async(args))
