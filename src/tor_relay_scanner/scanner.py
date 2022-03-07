@@ -7,12 +7,10 @@ import urllib.parse
 import argparse
 import requests
 
-TIMEOUT = 10.0
-
 DESCRIPTION = "Downloads all Tor Relay IP addresses from onionoo.torproject.org and checks whether random Relays are available."
 
 class TCPSocketConnectChecker:
-    def __init__(self, host, port, timeout=TIMEOUT):
+    def __init__(self, host, port, timeout=10.0):
         self.host = host
         self.port = port
         self.timeout = timeout
@@ -27,7 +25,7 @@ class TCPSocketConnectChecker:
         try:
             # Open connection
             reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(self.host, self.port), TIMEOUT)
+                asyncio.open_connection(self.host, self.port), timeout)
             # And close it
             writer.close()
             await writer.wait_closed()
@@ -37,10 +35,12 @@ class TCPSocketConnectChecker:
             self.connection_status = False
             return (False, e)
 
-
 class TorRelayGrabber:
+    def __init__(self, timeout=10.0):
+        self.timeout = timeout
+
     def _grab(self, url):
-        with requests.get(url, timeout=int(TIMEOUT)) as r:
+        with requests.get(url, self.timeout) as r:
             return r.json()
 
     def grab(self):
@@ -114,7 +114,7 @@ async def main_async(args):
     print(f"Tor Relay Scanner. Will scan up to {WORKING_RELAY_NUM_GOAL}" +
           " working relays (or till the end)", file=sys.stderr)
     print("Downloading Tor Relay information from onionoo.torproject.org…", file=sys.stderr)
-    relays = TorRelayGrabber().grab_parse()
+    relays = TorRelayGrabber(timeout=TIMEOUT).grab_parse()
     print("Done!", file=sys.stderr)
 
     random.shuffle(relays)
@@ -167,8 +167,8 @@ async def main_async(args):
 
 def main():
     parser = argparse.ArgumentParser(description=DESCRIPTION)
-    parser.add_argument('-n', type=int, dest='num_relays', nargs='?', default=30, help='Choose the number of relays to test.')
-    parser.add_argument('-g', '--goal', type=int, dest='working_relay_num_goal', nargs='?', default=5, help='Choose the max number of relays to scan.')
-    parser.add_argument('--timeout', type=float, nargs='?', default=10.0)
+    parser.add_argument('-n', type=int, dest='num_relays', nargs='?', default=30, help='The number of concurrent relays tested.')
+    parser.add_argument('-g', '--goal', type=int, dest='working_relay_num_goal', nargs='?', default=5, help='Test until at least this number of working relays are found')
+    parser.add_argument('--timeout', type=float, nargs='?', default=10.0, help='socket connection timeout')
     args = parser.parse_args()
     asyncio.run(main_async(args))
