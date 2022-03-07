@@ -25,7 +25,7 @@ class TCPSocketConnectChecker:
         try:
             # Open connection
             reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(self.host, self.port), timeout)
+                asyncio.open_connection(self.host, self.port), self.timeout)
             # And close it
             writer.close()
             await writer.wait_closed()
@@ -40,7 +40,7 @@ class TorRelayGrabber:
         self.timeout = timeout
 
     def _grab(self, url):
-        with requests.get(url, self.timeout) as r:
+        with requests.get(url, timeout=int(self.timeout)) as r:
             return r.json()
 
     def grab(self):
