@@ -140,7 +140,11 @@ async def main_async(args):
             print(relay, file=sys.stderr)
         print("", file=sys.stderr)
 
-        print(f"Already found {len(working_relays)} good relays. Test started…", file=sys.stderr)
+        if ntry:
+            print(f"Found {len(working_relays)} good relays so far. Test {ntry}/{numtries} started…", file=sys.stderr)
+        else:
+            print(f"Test started…", file=sys.stderr)
+
         tasks = list()
         for relay in test_relays:
             tasks.append(asyncio.create_task(relay.check()))
