@@ -110,6 +110,9 @@ async def main_async(args):
     NUM_RELAYS = args.num_relays
     WORKING_RELAY_NUM_GOAL = args.working_relay_num_goal
     TIMEOUT = args.timeout
+    outstream = args.outfile
+    torrc_fmt = args.torrc_fmt
+    BRIDGE_PREFIX = "Bridge " if torrc_fmt else ""
 
     print(f"Tor Relay Scanner. Will scan up to {WORKING_RELAY_NUM_GOAL}" +
           " working relays (or till the end)", file=sys.stderr)
@@ -154,7 +157,7 @@ async def main_async(args):
         print("The following relays are reachable this try:", file=sys.stderr)
         for relay in test_relays:
             if relay:
-                print(relay)
+                print(BRIDGE_PREFIX + str(relay), file=outstream)
                 working_relays.append(relay)
         if not any(test_relays):
             print("No relays are reachable this try.", file=sys.stderr)
@@ -164,9 +167,12 @@ async def main_async(args):
         print("All reachable relays:", file=sys.stderr)
         for relay in working_relays:
             if relay:
-                print(relay, file=sys.stderr)
+                print(BRIDGE_PREFIX + str(relay), file=sys.stderr)
         if not any(working_relays):
             print("No relays are reachable, at all.", file=sys.stderr)
+
+    if any(working_relays) and torrc_fmt:
+        print("UseBridges 1", file=outstream)
 
 
 def main():
@@ -174,5 +180,7 @@ def main():
     parser.add_argument('-n', type=int, dest='num_relays', default=30, help='The number of concurrent relays tested.')
     parser.add_argument('-g', '--goal', type=int, dest='working_relay_num_goal', default=5, help='Test until at least this number of working relays are found')
     parser.add_argument('--timeout', type=float, default=10.0, help='Socket connection timeout')
+    parser.add_argument('-o', '--outfile', type=argparse.FileType('w'), default=sys.stdout, help='Output reachable relays to file')
+    parser.add_argument('--torrc', action='store_true', dest='torrc_fmt', help='Output reachable relays in torrc format (with "Bridge" prefix)')
     args = parser.parse_args()
     asyncio.run(main_async(args))
