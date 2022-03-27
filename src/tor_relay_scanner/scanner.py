@@ -161,7 +161,7 @@ async def main_async(args):
         for relay in working_relays:
             if relay:
                 print(relay, file=sys.stderr)
-        if not any(test_relays):
+        if not any(working_relays):
             print("No relays are reachable, at all.", file=sys.stderr)
 
 
