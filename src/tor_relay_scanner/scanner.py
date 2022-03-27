@@ -167,8 +167,8 @@ async def main_async(args):
 
 def main():
     parser = argparse.ArgumentParser(description=DESCRIPTION)
-    parser.add_argument('-n', type=int, dest='num_relays', nargs='?', default=30, help='The number of concurrent relays tested.')
-    parser.add_argument('-g', '--goal', type=int, dest='working_relay_num_goal', nargs='?', default=5, help='Test until at least this number of working relays are found')
-    parser.add_argument('--timeout', type=float, nargs='?', default=10.0, help='socket connection timeout')
+    parser.add_argument('-n', type=int, dest='num_relays', default=30, help='The number of concurrent relays tested.')
+    parser.add_argument('-g', '--goal', type=int, dest='working_relay_num_goal', default=5, help='Test until at least this number of working relays are found')
+    parser.add_argument('--timeout', type=float, default=10.0, help='Socket connection timeout')
     args = parser.parse_args()
     asyncio.run(main_async(args))
