@@ -192,6 +192,6 @@ def main():
     parser.add_argument('--torrc', action='store_true', dest='torrc_fmt', help='Output reachable relays in torrc format (with "Bridge" prefix)')
     args = parser.parse_args()
     try:
-        asyncio.run(main_async(args))
+        return asyncio.run(main_async(args))
     except (KeyboardInterrupt, SystemExit):
         pass
