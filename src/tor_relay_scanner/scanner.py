@@ -96,9 +96,9 @@ class TorRelay:
             ret.append((parsed.hostname, parsed.port))
         return ret
 
-    async def check(self):
+    async def check(self, timeout=10.0):
         for i in self.iptuples:
-            s = TCPSocketConnectChecker(i[0], i[1])
+            s = TCPSocketConnectChecker(i[0], i[1], timeout=timeout)
             sc = await s.connect()
             if sc[0]:
                 self.reachable.append(i)
@@ -150,7 +150,7 @@ async def main_async(args):
 
         tasks = list()
         for relay in test_relays:
-            tasks.append(asyncio.create_task(relay.check()))
+            tasks.append(asyncio.create_task(relay.check(TIMEOUT)))
         fin = await asyncio.gather(*tasks)
         print("", file=sys.stderr)
 
