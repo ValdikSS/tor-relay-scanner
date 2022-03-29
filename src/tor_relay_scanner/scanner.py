@@ -49,7 +49,9 @@ class TorRelayGrabber:
         URLS = (BASEURL,
                 "https://corsbypasser.herokuapp.com/" + BASEURL,
                 "https://corsanywhere.herokuapp.com/" + BASEURL,
-                "https://tauron.herokuapp.com/" + BASEURL)
+                "https://tauron.herokuapp.com/" + BASEURL,
+                "https://cors-anywhere2.herokuapp.com/" + BASEURL,
+                "https://icors.vercel.app/?" + urllib.parse.quote(BASEURL))
 
         for url in URLS:
             try:
