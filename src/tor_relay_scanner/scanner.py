@@ -60,7 +60,10 @@ class TorRelayGrabber:
                 ), file=sys.stderr)
 
     def grab_parse(self):
-        return self.grab()["relays"]
+        grabbed = self.grab()
+        if grabbed:
+            grabbed = grabbed["relays"]
+        return grabbed
 
 
 class TorRelay:
@@ -118,6 +121,9 @@ async def main_async(args):
           " working relays (or till the end)", file=sys.stderr)
     print("Downloading Tor Relay information from onionoo.torproject.org…", file=sys.stderr)
     relays = TorRelayGrabber(timeout=TIMEOUT).grab_parse()
+    if not relays:
+        print("Tor Relay information can't be downloaded!", file=sys.stderr)
+        return 1
     print("Done!", file=sys.stderr)
 
     random.shuffle(relays)
