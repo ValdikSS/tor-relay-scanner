@@ -36,11 +36,12 @@ class TCPSocketConnectChecker:
             return (False, e)
 
 class TorRelayGrabber:
-    def __init__(self, timeout=10.0):
+    def __init__(self, timeout=10.0, proxy=None):
         self.timeout = timeout
+        self.proxy = {'https': proxy} if proxy else None
 
     def _grab(self, url):
-        with requests.get(url, timeout=int(self.timeout)) as r:
+        with requests.get(url, timeout=int(self.timeout), proxies=self.proxy) as r:
             return r.json()
 
     def grab(self):
@@ -122,7 +123,7 @@ async def main_async(args):
     print(f"Tor Relay Scanner. Will scan up to {WORKING_RELAY_NUM_GOAL}" +
           " working relays (or till the end)", file=sys.stderr)
     print("Downloading Tor Relay information from onionoo.torproject.org…", file=sys.stderr)
-    relays = TorRelayGrabber(timeout=TIMEOUT).grab_parse()
+    relays = TorRelayGrabber(timeout=TIMEOUT, proxy=args.proxy).grab_parse()
     if not relays:
         print("Tor Relay information can't be downloaded!", file=sys.stderr)
         return 1
@@ -190,6 +191,7 @@ def main():
     parser.add_argument('--timeout', type=float, default=10.0, help='Socket connection timeout')
     parser.add_argument('-o', '--outfile', type=argparse.FileType('w'), default=sys.stdout, help='Output reachable relays to file')
     parser.add_argument('--torrc', action='store_true', dest='torrc_fmt', help='Output reachable relays in torrc format (with "Bridge" prefix)')
+    parser.add_argument('--proxy', type=str, help='Set proxy for onionoo information download. Format: http://user:pass@host:port; socks5h://user:pass@host:port')
     args = parser.parse_args()
     try:
         return asyncio.run(main_async(args))
