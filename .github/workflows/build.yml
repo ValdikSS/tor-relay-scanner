@@ -1,0 +1,85 @@
+name: Build tor-relay-scanner
+
+on:
+  push:
+    paths:
+      - 'src/**'
+
+env:
+  PYTHON_URL: https://www.python.org/ftp/python/3.8.10/python-3.8.10.exe
+  PYTHON_NAME: python-3.8.10.exe
+  PYTHON_SHA256: ad07633a1f0cd795f3bf9da33729f662281df196b4567fa795829f3bb38a30ac
+  WINEARCH: win32
+
+jobs:
+  build_linux:
+    name: Build Python pyz file
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Declare short commit variable
+        id: vars
+        run: |
+          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+
+      - name: Build pyz file
+        run: |
+          ./build.sh
+          mv torparse.pyz tor-relay-scanner-${{ steps.vars.outputs.sha_short }}.pyz
+
+      - name: Upload output file x86
+        uses: actions/upload-artifact@v2
+        with:
+          name: tor-relay-scanner-${{ steps.vars.outputs.sha_short }}.pyz
+          path: tor-relay-scanner-${{ steps.vars.outputs.sha_short }}.pyz
+
+  build_windows:
+    name: Build Windows exe file
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Declare short commit variable
+        id: vars
+        run: |
+          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+
+      - name: Install Wine
+        run: >
+          sudo rm /var/lib/man-db/auto-update &&
+          sudo sed -i 's/yes/no/g' /etc/initramfs-tools/update-initramfs.conf &&
+          sudo dpkg --add-architecture i386 && sudo apt update &&
+          sudo eatmydata apt install -y --allow-downgrades libpcre2-8-0/focal &&
+          sudo DEBIAN_FRONTEND=noninteractive eatmydata
+          apt install -y --no-install-recommends wine-stable wine32 xvfb
+
+      - name: Download Python from cache
+        id: python-cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ env. PYTHON_NAME }}
+          key: ${{ env. PYTHON_SHA256 }}
+
+      - name: Download Python from the website
+        if: steps.python-cache.outputs.cache-hit != 'true'
+        run: >
+          wget ${{ env. PYTHON_URL }} &&
+          (echo ${{ env. PYTHON_SHA256 }} ${{ env. PYTHON_NAME }} | sha256sum -c)
+
+      - name: Install Python and dependencies (Windows)
+        run: |
+          xvfb-run wine ${{ env. PYTHON_NAME }} /quiet InstallAllUsers=1 PrependPath=1
+          wine pip install .
+          wine pip install pyinstaller
+
+      - name: Build exe file for Windows
+        run: |
+          wine pyinstaller -c -F src/tor_relay_scanner/__main__.py
+          mv dist/__main__.exe tor-relay-scanner-${{ steps.vars.outputs.sha_short }}.exe
+
+      - name: Upload output file
+        uses: actions/upload-artifact@v2
+        with:
+          name: tor-relay-scanner-${{ steps.vars.outputs.sha_short }}.exe
+          path: tor-relay-scanner-${{ steps.vars.outputs.sha_short }}.exe
