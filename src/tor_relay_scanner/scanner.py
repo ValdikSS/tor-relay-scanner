@@ -6,6 +6,7 @@ import sys
 import urllib.parse
 import argparse
 import subprocess
+import os.path
 import requests
 
 DESCRIPTION = "Downloads all Tor Relay IP addresses from onionoo.torproject.org and checks whether random Relays are available."
@@ -113,6 +114,14 @@ class TorRelay:
         return bool(self.reachable)
 
 
+def start_browser():
+    browser_cmds=("Browser/start-tor-browser --detach", "Browser/firefox.exe")
+    for cmd in browser_cmds:
+        if os.path.exists(cmd.split(" ")[0]):
+            subprocess.Popen(cmd.split(" "))
+            break
+
+
 async def main_async(args):
     NUM_RELAYS = args.num_relays
     WORKING_RELAY_NUM_GOAL = args.working_relay_num_goal
@@ -201,6 +210,8 @@ async def main_async(args):
             except OSError as e:
                 print("Can't open Tor Browser configuration:", e, file=sys.stderr)
 
+    if args.start_browser:
+        start_browser()
 
 
 def main():
@@ -214,6 +225,7 @@ def main():
     parser.add_argument('--browser', type=str, nargs='?', metavar='/path/to/prefs.js', dest='prefsjs',
                         const='Browser/TorBrowser/Data/Browser/profile.default/prefs.js',
                         help='Install found relays into Tor Browser configuration file (prefs.js)')
+    parser.add_argument('--start-browser', action='store_true', help='Launch browser after scanning')
     args = parser.parse_args()
     try:
         return asyncio.run(main_async(args))
