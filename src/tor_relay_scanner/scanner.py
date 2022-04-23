@@ -5,6 +5,7 @@ import random
 import sys
 import urllib.parse
 import argparse
+import subprocess
 import requests
 
 DESCRIPTION = "Downloads all Tor Relay IP addresses from onionoo.torproject.org and checks whether random Relays are available."
@@ -180,8 +181,26 @@ async def main_async(args):
         if not any(working_relays):
             print("No relays are reachable, at all.", file=sys.stderr)
 
-    if any(working_relays) and torrc_fmt:
-        print("UseBridges 1", file=outstream)
+    if any(working_relays):
+        if torrc_fmt:
+            print("UseBridges 1", file=outstream)
+        if args.prefsjs:
+            try:
+                with open(args.prefsjs, "r+") as f:
+                    prefsjs = str()
+                    for line in f:
+                        if "torbrowser.settings.bridges." not in line:
+                            prefsjs += line
+                    for num, relay in enumerate(working_relays):
+                        prefsjs += f'user_pref("torbrowser.settings.bridges.bridge_strings.{num}", "{relay}");\n'
+                    prefsjs += 'user_pref("torbrowser.settings.bridges.enabled", true);\n'
+                    prefsjs += 'user_pref("torbrowser.settings.bridges.source", 2);\n'
+                    f.seek(0)
+                    f.truncate()
+                    f.write(prefsjs)
+            except OSError as e:
+                print("Can't open Tor Browser configuration:", e, file=sys.stderr)
+
 
 
 def main():
@@ -192,6 +211,9 @@ def main():
     parser.add_argument('-o', '--outfile', type=argparse.FileType('w'), default=sys.stdout, help='Output reachable relays to file')
     parser.add_argument('--torrc', action='store_true', dest='torrc_fmt', help='Output reachable relays in torrc format (with "Bridge" prefix)')
     parser.add_argument('--proxy', type=str, help='Set proxy for onionoo information download. Format: http://user:pass@host:port; socks5h://user:pass@host:port')
+    parser.add_argument('--browser', type=str, nargs='?', metavar='/path/to/prefs.js', dest='prefsjs',
+                        const='Browser/TorBrowser/Data/Browser/profile.default/prefs.js',
+                        help='Install found relays into Tor Browser configuration file (prefs.js)')
     args = parser.parse_args()
     try:
         return asyncio.run(main_async(args))
