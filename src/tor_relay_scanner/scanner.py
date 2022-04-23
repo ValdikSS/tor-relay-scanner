@@ -78,21 +78,21 @@ class TorRelay:
         self.iptuples = self._parse_or_addresses(relayinfo["or_addresses"])
         self.reachable = list()
 
-    def _reachable(self):
-        r = ""
+    def reachables(self):
+        r = list()
         for i in self.reachable:
-            if r:
-                r += "\n"
-            r += "{}:{} {}".format(i[0] if i[0].find(":") == -1 else "[" + i[0] + "]",
-                                   i[1],
-                                   self.fingerprint,)
-
+            r.append("{}:{} {}".format(i[0] if i[0].find(":") == -1 else "[" + i[0] + "]",
+                                i[1],
+                                self.fingerprint,))
         return r
+
+    def _reachable_str(self):
+        return "\n".join(self.reachables())
 
     def __repr__(self):
         if not self.reachable:
             return str(self.relayinfo)
-        return self._reachable()
+        return self._reachable_str()
 
     def __len__(self):
         return len(self.reachable)
@@ -120,6 +120,10 @@ def start_browser():
         if os.path.exists(cmd.split(" ")[0]):
             subprocess.Popen(cmd.split(" "))
             break
+
+
+def str_list_with_prefix(prefix, list_):
+    return "\n".join([prefix + r for r in list_])
 
 
 async def main_async(args):
@@ -176,7 +180,7 @@ async def main_async(args):
         print("The following relays are reachable this try:", file=sys.stderr)
         for relay in test_relays:
             if relay:
-                print(BRIDGE_PREFIX + str(relay), file=outstream)
+                print(str_list_with_prefix(BRIDGE_PREFIX, relay.reachables()), file=outstream)
                 working_relays.append(relay)
         if not any(test_relays):
             print("No relays are reachable this try.", file=sys.stderr)
@@ -186,7 +190,7 @@ async def main_async(args):
         print("All reachable relays:", file=sys.stderr)
         for relay in working_relays:
             if relay:
-                print(BRIDGE_PREFIX + str(relay), file=sys.stderr)
+                print(str_list_with_prefix(BRIDGE_PREFIX, relay.reachables()), file=sys.stderr)
         if not any(working_relays):
             print("No relays are reachable, at all.", file=sys.stderr)
 
@@ -200,7 +204,8 @@ async def main_async(args):
                     for line in f:
                         if "torbrowser.settings.bridges." not in line:
                             prefsjs += line
-                    for num, relay in enumerate(working_relays):
+                    # Ugly r.reachables() array flattening, as it may have more than one reachable record.
+                    for num, relay in enumerate(sum([r.reachables() for r in working_relays], [])):
                         prefsjs += f'user_pref("torbrowser.settings.bridges.bridge_strings.{num}", "{relay}");\n'
                     prefsjs += 'user_pref("torbrowser.settings.bridges.enabled", true);\n'
                     prefsjs += 'user_pref("torbrowser.settings.bridges.source", 2);\n'
