@@ -30,7 +30,7 @@ class TCPSocketConnectChecker:
                 asyncio.open_connection(self.host, self.port), self.timeout)
             # And close it
             writer.close()
-            await writer.wait_closed()
+            #await writer.wait_closed()
             self.connection_status = True
             return (True, None)
         except (OSError, asyncio.TimeoutError) as e:
@@ -134,8 +134,9 @@ async def main_async(args):
     torrc_fmt = args.torrc_fmt
     BRIDGE_PREFIX = "Bridge " if torrc_fmt else ""
 
-    print(f"Tor Relay Scanner. Will scan up to {WORKING_RELAY_NUM_GOAL}" +
-          " working relays (or till the end)", file=sys.stderr)
+    loop = asyncio.get_event_loop()
+    print("Tor Relay Scanner. Will scan up to {}" +
+          " working relays (or till the end)".format(WORKING_RELAY_NUM_GOAL), file=sys.stderr)
     print("Downloading Tor Relay information from onionoo.torproject.org…", file=sys.stderr)
     relays = TorRelayGrabber(timeout=TIMEOUT, proxy=args.proxy).grab_parse()
     if not relays:
@@ -161,19 +162,21 @@ async def main_async(args):
             break
 
         print(
-            f"\nTry {ntry}/{numtries}, We'll test the following {NUM_RELAYS} random relays:", file=sys.stderr)
+            "\nTry {}/{}, We'll test the following {} random relays:".format(
+            ntry, numtries, NUM_RELAYS), file=sys.stderr)
         for relay in test_relays:
             print(relay, file=sys.stderr)
         print("", file=sys.stderr)
 
         if ntry:
-            print(f"Found {len(working_relays)} good relays so far. Test {ntry}/{numtries} started…", file=sys.stderr)
+            print("Found {} good relays so far. Test {}/{} started…".format(
+            len(working_relays), ntry, numtries), file=sys.stderr)
         else:
-            print(f"Test started…", file=sys.stderr)
+            print("Test started…", file=sys.stderr)
 
         tasks = list()
         for relay in test_relays:
-            tasks.append(asyncio.create_task(relay.check(TIMEOUT)))
+            tasks.append(loop.create_task(relay.check(TIMEOUT)))
         fin = await asyncio.gather(*tasks)
         print("", file=sys.stderr)
 
@@ -206,7 +209,7 @@ async def main_async(args):
                             prefsjs += line
                     # Ugly r.reachables() array flattening, as it may have more than one reachable record.
                     for num, relay in enumerate(sum([r.reachables() for r in working_relays], [])):
-                        prefsjs += f'user_pref("torbrowser.settings.bridges.bridge_strings.{num}", "{relay}");\n'
+                        prefsjs += 'user_pref("torbrowser.settings.bridges.bridge_strings.{}", "{}");\n'.format(num, relay)
                     prefsjs += 'user_pref("torbrowser.settings.bridges.enabled", true);\n'
                     prefsjs += 'user_pref("torbrowser.settings.bridges.source", 2);\n'
                     f.seek(0)
@@ -232,7 +235,10 @@ def main():
                         help='Install found relays into Tor Browser configuration file (prefs.js)')
     parser.add_argument('--start-browser', action='store_true', help='Launch browser after scanning')
     args = parser.parse_args()
+    loop = asyncio.get_event_loop()
+
     try:
-        return asyncio.run(main_async(args))
+        return loop.run_until_complete(main_async(args))
     except (KeyboardInterrupt, SystemExit):
         pass
+    loop.close()
