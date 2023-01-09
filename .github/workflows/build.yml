@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'src/**'
+  workflow_dispatch:
 
 env:
   PYTHON_URL: https://www.python.org/ftp/python/3.8.10/python-3.8.10.exe
@@ -16,12 +17,12 @@ jobs:
     name: Build Python pyz file
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Declare short commit variable
         id: vars
         run: |
-          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Build pyz file
         run: |
@@ -29,7 +30,7 @@ jobs:
           mv torparse.pyz tor-relay-scanner-${{ steps.vars.outputs.sha_short }}.pyz
 
       - name: Upload output file x86
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: tor-relay-scanner-${{ steps.vars.outputs.sha_short }}.pyz
           path: tor-relay-scanner-${{ steps.vars.outputs.sha_short }}.pyz
@@ -38,25 +39,27 @@ jobs:
     name: Build Windows exe file
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Declare short commit variable
         id: vars
         run: |
-          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Install Wine
         run: >
           sudo rm /var/lib/man-db/auto-update &&
           sudo sed -i 's/yes/no/g' /etc/initramfs-tools/update-initramfs.conf &&
+          sudo apt-add-repository -y ppa:ondrej/php &&
+          sudo eatmydata apt install ppa-purge &&
+          sudo eatmydata ppa-purge -y ppa:ondrej/php &&
           sudo dpkg --add-architecture i386 && sudo apt update &&
-          sudo eatmydata apt install -y --allow-downgrades libpcre2-8-0/focal &&
           sudo DEBIAN_FRONTEND=noninteractive eatmydata
           apt install -y --no-install-recommends wine-stable wine32 xvfb
 
       - name: Download Python from cache
         id: python-cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ${{ env. PYTHON_NAME }}
           key: ${{ env. PYTHON_SHA256 }}
@@ -79,7 +82,7 @@ jobs:
           mv dist/__main__.exe tor-relay-scanner-${{ steps.vars.outputs.sha_short }}.exe
 
       - name: Upload output file
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: tor-relay-scanner-${{ steps.vars.outputs.sha_short }}.exe
           path: tor-relay-scanner-${{ steps.vars.outputs.sha_short }}.exe
