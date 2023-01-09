@@ -46,11 +46,14 @@ class TorRelayGrabber:
         with requests.get(url, timeout=int(self.timeout), proxies=self.proxy) as r:
             return r.json()
 
-    def grab(self):
+    def grab(self, preferred_urls_list=None):
         BASEURL = "https://onionoo.torproject.org/details?type=relay&running=true&fields=fingerprint,or_addresses"
         # Use public CORS proxy as a regular proxy in case if onionoo.torproject.org is unreachable
-        URLS = (BASEURL,
-                "https://icors.vercel.app/?" + urllib.parse.quote(BASEURL))
+        URLS = [BASEURL,
+                "https://icors.vercel.app/?" + urllib.parse.quote(BASEURL)]
+        if preferred_urls_list:
+            for pref_url in preferred_urls_list:
+                URLS.insert(0, pref_url)
 
         for url in URLS:
             try:
@@ -60,8 +63,8 @@ class TorRelayGrabber:
                     urllib.parse.urlparse(url).hostname, e
                 ), file=sys.stderr)
 
-    def grab_parse(self):
-        grabbed = self.grab()
+    def grab_parse(self, preferred_urls_list=None):
+        grabbed = self.grab(preferred_urls_list)
         if grabbed:
             grabbed = grabbed["relays"]
         return grabbed
@@ -134,7 +137,7 @@ async def main_async(args):
     print("Tor Relay Scanner. Will scan up to {}" \
           " working relays (or till the end)".format(WORKING_RELAY_NUM_GOAL), file=sys.stderr)
     print("Downloading Tor Relay information from onionoo.torproject.org…", file=sys.stderr)
-    relays = TorRelayGrabber(timeout=TIMEOUT, proxy=args.proxy).grab_parse()
+    relays = TorRelayGrabber(timeout=TIMEOUT, proxy=args.proxy).grab_parse(args.url)
     if not relays:
         print("Tor Relay information can't be downloaded!", file=sys.stderr)
         return 1
@@ -244,6 +247,7 @@ def main():
     parser.add_argument('-o', '--outfile', type=argparse.FileType('w'), default=sys.stdout, help='Output reachable relays to file')
     parser.add_argument('--torrc', action='store_true', dest='torrc_fmt', help='Output reachable relays in torrc format (with "Bridge" prefix)')
     parser.add_argument('--proxy', type=str, help='Set proxy for onionoo information download. Format: http://user:pass@host:port; socks5h://user:pass@host:port')
+    parser.add_argument('--url', type=str, action='append', help='Preferred alternative URL for onionoo relay list. Could be used multiple times.')
     parser.add_argument('-p', type=int, dest='port', action='append', help='Scan for relays running on specified port number. Could be used multiple times.')
     parser.add_argument('--browser', type=str, nargs='?', metavar='/path/to/prefs.js', dest='prefsjs',
                         const='Browser/TorBrowser/Data/Browser/profile.default/prefs.js',
