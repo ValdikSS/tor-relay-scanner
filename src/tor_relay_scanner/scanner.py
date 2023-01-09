@@ -131,7 +131,7 @@ async def main_async(args):
     BRIDGE_PREFIX = "Bridge " if torrc_fmt else ""
 
     loop = asyncio.get_event_loop()
-    print("Tor Relay Scanner. Will scan up to {}" +
+    print("Tor Relay Scanner. Will scan up to {}" \
           " working relays (or till the end)".format(WORKING_RELAY_NUM_GOAL), file=sys.stderr)
     print("Downloading Tor Relay information from onionoo.torproject.org…", file=sys.stderr)
     relays = TorRelayGrabber(timeout=TIMEOUT, proxy=args.proxy).grab_parse()
