@@ -140,6 +140,24 @@ async def main_async(args):
     print("Done!", file=sys.stderr)
 
     random.shuffle(relays)
+
+    if args.port:
+        relays_new = list()
+        for relay in relays:
+            for ipport in TorRelay(relay).iptuples:
+                if ipport[1] in args.port:
+                    relay_copy = relay
+                    relay_copy["or_addresses"] = ["{}:{}".format(
+                        ipport[0] if ipport[0].find(":") == -1 else "[" + ipport[0] + "]",
+                        ipport[1])
+                    ]
+                    relays_new.append(relay_copy)
+        relays = relays_new
+        if not relays:
+            print("There are no relays within specified port number constrains!", file=sys.stderr)
+            print("Try changing port numbers.", file=sys.stderr)
+            return 2
+
     working_relays = list()
     ntry = 0
     relaypos = 0
@@ -223,6 +241,7 @@ def main():
     parser.add_argument('-o', '--outfile', type=argparse.FileType('w'), default=sys.stdout, help='Output reachable relays to file')
     parser.add_argument('--torrc', action='store_true', dest='torrc_fmt', help='Output reachable relays in torrc format (with "Bridge" prefix)')
     parser.add_argument('--proxy', type=str, help='Set proxy for onionoo information download. Format: http://user:pass@host:port; socks5h://user:pass@host:port')
+    parser.add_argument('-p', type=int, dest='port', action='append', help='Scan for relays running on specified port number. Could be used multiple times.')
     parser.add_argument('--browser', type=str, nargs='?', metavar='/path/to/prefs.js', dest='prefsjs',
                         const='Browser/TorBrowser/Data/Browser/profile.default/prefs.js',
                         help='Install found relays into Tor Browser configuration file (prefs.js)')
