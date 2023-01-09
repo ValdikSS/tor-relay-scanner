@@ -50,10 +50,6 @@ class TorRelayGrabber:
         BASEURL = "https://onionoo.torproject.org/details?type=relay&running=true&fields=fingerprint,or_addresses"
         # Use public CORS proxy as a regular proxy in case if onionoo.torproject.org is unreachable
         URLS = (BASEURL,
-                "https://corsbypasser.herokuapp.com/" + BASEURL,
-                "https://corsanywhere.herokuapp.com/" + BASEURL,
-                "https://tauron.herokuapp.com/" + BASEURL,
-                "https://cors-anywhere2.herokuapp.com/" + BASEURL,
                 "https://icors.vercel.app/?" + urllib.parse.quote(BASEURL))
 
         for url in URLS:
