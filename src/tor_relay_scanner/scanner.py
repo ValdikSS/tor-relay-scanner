@@ -136,7 +136,7 @@ async def main_async(args):
 
     print(f"Tor Relay Scanner. Will scan up to {WORKING_RELAY_NUM_GOAL}" +
           " working relays (or till the end)", file=sys.stderr)
-    print("Downloading Tor Relay information from onionoo.torproject.org…", file=sys.stderr)
+    print("Downloading Tor Relay information from Tor Metrics…", file=sys.stderr)
     relays = TorRelayGrabber(timeout=TIMEOUT, proxy=args.proxy).grab_parse(args.url)
     if not relays:
         print("Tor Relay information can't be downloaded!", file=sys.stderr)
