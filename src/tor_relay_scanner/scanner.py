@@ -200,6 +200,8 @@ async def main_async(args):
         for relay in test_relays:
             if relay:
                 print(str_list_with_prefix(BRIDGE_PREFIX, relay.reachables()), file=outstream)
+                if sys.stdout != outstream:
+                    print(str_list_with_prefix(BRIDGE_PREFIX, relay.reachables()), file=sys.stderr)
                 working_relays.append(relay)
         if not any(test_relays):
             print("No relays are reachable this try.", file=sys.stderr)
