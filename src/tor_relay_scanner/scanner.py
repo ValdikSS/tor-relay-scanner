@@ -51,7 +51,8 @@ class TorRelayGrabber:
         # Use public CORS proxy as a regular proxy in case if onionoo.torproject.org is unreachable
         URLS = [BASEURL,
                 "https://icors.vercel.app/?" + urllib.parse.quote(BASEURL),
-                "https://github.com/ValdikSS/tor-onionoo-mirror/raw/master/details-running-relays-fingerprint-address-only.json"]
+                "https://github.com/ValdikSS/tor-onionoo-mirror/raw/master/details-running-relays-fingerprint-address-only.json",
+                "https://bitbucket.org/ValdikSS/tor-onionoo-mirror/raw/master/details-running-relays-fingerprint-address-only.json"]
         if preferred_urls_list:
             for pref_url in preferred_urls_list:
                 URLS.insert(0, pref_url)
