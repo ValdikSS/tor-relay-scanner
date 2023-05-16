@@ -15,7 +15,7 @@ env:
 jobs:
   build_linux:
     name: Build Python pyz file
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
 
@@ -37,7 +37,7 @@ jobs:
 
   build_windows:
     name: Build Windows exe file
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
 
@@ -51,7 +51,7 @@ jobs:
           sudo rm /var/lib/man-db/auto-update &&
           sudo sed -i 's/yes/no/g' /etc/initramfs-tools/update-initramfs.conf &&
           sudo dpkg --add-architecture i386 &&
-          sudo dpkg -l | awk '/ii  lib.*deb.sury.org/ {gsub(/:.*/, s, $2); print $2}' | xargs apt show -a | awk '/Package:/ {p=$2} /APT-Sources: .*focal\/main/ {print p"/focal"}' | sudo xargs eatmydata apt install --allow-downgrades &&
+          sudo dpkg -l | awk '/ii  lib.*deb.sury.org/ {gsub(/:.*/, s, $2); print $2}' | xargs apt show -a | awk '/Package:/ {p=$2} /APT-Sources: .*jammy\/main/ {print p"/jammy"}' | sudo xargs eatmydata apt install --allow-downgrades &&
           sudo apt update &&
           sudo DEBIAN_FRONTEND=noninteractive eatmydata
           apt install -y --no-install-recommends wine-stable wine32 xvfb
