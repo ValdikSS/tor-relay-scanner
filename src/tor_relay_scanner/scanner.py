@@ -47,7 +47,7 @@ class TorRelayGrabber:
             return r.json()
 
     def grab(self, preferred_urls_list=None):
-        BASEURL = "https://onionoo.torproject.org/details?type=relay&running=true&fields=fingerprint,or_addresses"
+        BASEURL = "https://onionoo.torproject.org/details?type=relay&running=true&fields=fingerprint,or_addresses,country"
         # Use public CORS proxy as a regular proxy in case if onionoo.torproject.org is unreachable
         URLS = [BASEURL,
                 "https://icors.vercel.app/?" + urllib.parse.quote(BASEURL),
@@ -145,6 +145,13 @@ async def main_async(args):
     print("Done!", file=sys.stderr)
 
     random.shuffle(relays)
+
+    if args.preferred_country:
+        countries = {}
+        for i, c in enumerate(args.preferred_country.split(",")):
+            countries[c] = i
+        # 1000 is just a sufficiently large number for default sorting
+        relays = sorted(relays, key=lambda x: countries.get(x.get("country"), 1000))
 
     if args.port:
         relays_new = list()
@@ -244,6 +251,7 @@ def main():
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument('-n', type=int, dest='num_relays', default=30, help='The number of concurrent relays tested.')
     parser.add_argument('-g', '--goal', type=int, dest='working_relay_num_goal', default=5, help='Test until at least this number of working relays are found')
+    parser.add_argument('-c', '--preferred-country', type=str, default="", help='Preferred country list, comma-separeted. Example: se,gb,nl,de')
     parser.add_argument('--timeout', type=float, default=10.0, help='Socket connection timeout')
     parser.add_argument('-o', '--outfile', type=argparse.FileType('w'), default=sys.stdout, help='Output reachable relays to file')
     parser.add_argument('--torrc', action='store_true', dest='torrc_fmt', help='Output reachable relays in torrc format (with "Bridge" prefix)')
