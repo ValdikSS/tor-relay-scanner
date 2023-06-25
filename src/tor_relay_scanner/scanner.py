@@ -158,7 +158,9 @@ async def main_async(args):
         for relay in relays:
             for ipport in TorRelay(relay).iptuples:
                 if ipport[1] in args.port:
-                    relay_copy = relay
+                    # deep copy needed here, otherwise subsequent loop
+                    # modifies "previous" value
+                    relay_copy = relay.copy()
                     relay_copy["or_addresses"] = ["{}:{}".format(
                         ipport[0] if ipport[0].find(":") == -1 else "[" + ipport[0] + "]",
                         ipport[1])
