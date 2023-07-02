@@ -22,7 +22,7 @@ Works on Windows and Linux. Not tested on macOS.
 
 This utility is capable of generating `torrc` configuration file containing Bridge information. Launch it with the following arguments:
 
-`--torrc --output /etc/tor/bridges.conf`
+`--torrc --outfile /etc/tor/bridges.conf`
 
 And append:
 
