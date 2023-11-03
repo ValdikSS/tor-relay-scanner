@@ -5,6 +5,7 @@ import random
 import sys
 import urllib.parse
 import argparse
+import contextlib
 import subprocess
 import os.path
 import requests
@@ -19,9 +20,7 @@ class TCPSocketConnectChecker:
         self.connection_status = None
 
     def __repr__(self):
-        return "{}:{}".format(
-            self.host if self.host.find(":") == -1 else "[" + self.host + "]",
-            self.port)
+        return f'{self.host if self.host.find(":") == -1 else f"[{self.host}]"}:{self.port}'
 
     async def connect(self):
         try:
@@ -49,10 +48,12 @@ class TorRelayGrabber:
     def grab(self, preferred_urls_list=None):
         BASEURL = "https://onionoo.torproject.org/details?type=relay&running=true&fields=fingerprint,or_addresses,country"
         # Use public CORS proxy as a regular proxy in case if onionoo.torproject.org is unreachable
-        URLS = [BASEURL,
-                "https://icors.vercel.app/?" + urllib.parse.quote(BASEURL),
-                "https://github.com/ValdikSS/tor-onionoo-mirror/raw/master/details-running-relays-fingerprint-address-only.json",
-                "https://bitbucket.org/ValdikSS/tor-onionoo-mirror/raw/master/details-running-relays-fingerprint-address-only.json"]
+        URLS = [
+            BASEURL,
+            f"https://icors.vercel.app/?{urllib.parse.quote(BASEURL)}",
+            "https://github.com/ValdikSS/tor-onionoo-mirror/raw/master/details-running-relays-fingerprint-address-only.json",
+            "https://bitbucket.org/ValdikSS/tor-onionoo-mirror/raw/master/details-running-relays-fingerprint-address-only.json",
+        ]
         if preferred_urls_list:
             for pref_url in preferred_urls_list:
                 URLS.insert(0, pref_url)
@@ -61,9 +62,10 @@ class TorRelayGrabber:
             try:
                 return self._grab(url)
             except Exception as e:
-                print("Can't download Tor Relay data from/via {}: {}".format(
-                    urllib.parse.urlparse(url).hostname, e
-                ), file=sys.stderr)
+                print(
+                    f"Can't download Tor Relay data from/via {urllib.parse.urlparse(url).hostname}: {e}",
+                    file=sys.stderr,
+                )
 
     def grab_parse(self, preferred_urls_list=None):
         grabbed = self.grab(preferred_urls_list)
@@ -77,31 +79,27 @@ class TorRelay:
         self.relayinfo = relayinfo
         self.fingerprint = relayinfo["fingerprint"]
         self.iptuples = self._parse_or_addresses(relayinfo["or_addresses"])
-        self.reachable = list()
+        self.reachable = []
 
     def reachables(self):
-        r = list()
-        for i in self.reachable:
-            r.append("{}:{} {}".format(i[0] if i[0].find(":") == -1 else "[" + i[0] + "]",
-                                i[1],
-                                self.fingerprint,))
-        return r
+        return [
+            f'{i[0] if i[0].find(":") == -1 else f"[{i[0]}]"}:{i[1]} {self.fingerprint}'
+            for i in self.reachable
+        ]
 
     def _reachable_str(self):
         return "\n".join(self.reachables())
 
     def __repr__(self):
-        if not self.reachable:
-            return str(self.relayinfo)
-        return self._reachable_str()
+        return self._reachable_str() if self.reachable else str(self.relayinfo)
 
     def __len__(self):
         return len(self.reachable)
 
     def _parse_or_addresses(self, or_addresses):
-        ret = list()
+        ret = []
         for address in or_addresses:
-            parsed = urllib.parse.urlparse("//" + address)
+            parsed = urllib.parse.urlparse(f"//{address}")
             ret.append((parsed.hostname, parsed.port))
         return ret
 
@@ -129,14 +127,16 @@ def str_list_with_prefix(prefix, list_):
 
 async def main_async(args):
     NUM_RELAYS = args.num_relays
-    WORKING_RELAY_NUM_GOAL = args.working_relay_num_goal
     TIMEOUT = args.timeout
     outstream = args.outfile
     torrc_fmt = args.torrc_fmt
     BRIDGE_PREFIX = "Bridge " if torrc_fmt else ""
 
-    print(f"Tor Relay Scanner. Will scan up to {WORKING_RELAY_NUM_GOAL}" +
-          " working relays (or till the end)", file=sys.stderr)
+    WORKING_RELAY_NUM_GOAL = args.working_relay_num_goal
+    print(
+        f"Tor Relay Scanner. Will scan up to {WORKING_RELAY_NUM_GOAL} working relays (or till the end)",
+        file=sys.stderr,
+    )
     print("Downloading Tor Relay information from Tor Metrics…", file=sys.stderr)
     relays = TorRelayGrabber(timeout=TIMEOUT, proxy=args.proxy).grab_parse(args.url)
     if not relays:
@@ -147,23 +147,20 @@ async def main_async(args):
     random.shuffle(relays)
 
     if args.preferred_country:
-        countries = {}
-        for i, c in enumerate(args.preferred_country.split(",")):
-            countries[c] = i
+        countries = {c: i for i, c in enumerate(args.preferred_country.split(","))}
         # 1000 is just a sufficiently large number for default sorting
         relays = sorted(relays, key=lambda x: countries.get(x.get("country"), 1000))
 
     if args.port:
-        relays_new = list()
+        relays_new = []
         for relay in relays:
             for ipport in TorRelay(relay).iptuples:
                 if ipport[1] in args.port:
                     # deep copy needed here, otherwise subsequent loop
                     # modifies "previous" value
                     relay_copy = relay.copy()
-                    relay_copy["or_addresses"] = ["{}:{}".format(
-                        ipport[0] if ipport[0].find(":") == -1 else "[" + ipport[0] + "]",
-                        ipport[1])
+                    relay_copy["or_addresses"] = [
+                        f'{ipport[0] if ipport[0].find(":") == -1 else f"[{ipport[0]}]"}:{ipport[1]}'
                     ]
                     relays_new.append(relay_copy)
         relays = relays_new
@@ -172,7 +169,7 @@ async def main_async(args):
             print("Try changing port numbers.", file=sys.stderr)
             return 2
 
-    working_relays = list()
+    working_relays = []
     ntry = 0
     relaypos = 0
     numtries = round(len(relays) / NUM_RELAYS)
@@ -197,11 +194,9 @@ async def main_async(args):
         if ntry:
             print(f"Found {len(working_relays)} good relays so far. Test {ntry}/{numtries} started…", file=sys.stderr)
         else:
-            print(f"Test started…", file=sys.stderr)
+            print("Test started…", file=sys.stderr)
 
-        tasks = list()
-        for relay in test_relays:
-            tasks.append(asyncio.create_task(relay.check(TIMEOUT)))
+        tasks = [asyncio.create_task(relay.check(TIMEOUT)) for relay in test_relays]
         fin = await asyncio.gather(*tasks)
         print("", file=sys.stderr)
 
@@ -235,7 +230,7 @@ async def main_async(args):
                         if "torbrowser.settings.bridges." not in line:
                             prefsjs += line
                     # Ugly r.reachables() array flattening, as it may have more than one reachable record.
-                    for num, relay in enumerate(sum([r.reachables() for r in working_relays], [])):
+                    for num, relay in enumerate(sum((r.reachables() for r in working_relays), [])):
                         prefsjs += f'user_pref("torbrowser.settings.bridges.bridge_strings.{num}", "{relay}");\n'
                     prefsjs += 'user_pref("torbrowser.settings.bridges.enabled", true);\n'
                     prefsjs += 'user_pref("torbrowser.settings.bridges.source", 2);\n'
@@ -265,7 +260,5 @@ def main():
                         help='Install found relays into Tor Browser configuration file (prefs.js)')
     parser.add_argument('--start-browser', action='store_true', help='Launch browser after scanning')
     args = parser.parse_args()
-    try:
+    with contextlib.suppress(KeyboardInterrupt, SystemExit):
         return asyncio.run(main_async(args))
-    except (KeyboardInterrupt, SystemExit):
-        pass
