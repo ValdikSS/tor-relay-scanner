@@ -253,7 +253,7 @@ def main():
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument('-n', type=int, dest='num_relays', default=30, help='The number of concurrent relays tested.')
     parser.add_argument('-g', '--goal', type=int, dest='working_relay_num_goal', default=5, help='Test until at least this number of working relays are found')
-    parser.add_argument('-c', '--preferred-country', type=str, default="", help='Preferred country list, comma-separeted. Example: se,gb,nl,de')
+    parser.add_argument('-c', '--preferred-country', type=str, default="", help='Preferred country list, comma-separated. Example: se,gb,nl,de')
     parser.add_argument('--timeout', type=float, default=10.0, help='Socket connection timeout')
     parser.add_argument('-o', '--outfile', type=argparse.FileType('w'), default=sys.stdout, help='Output reachable relays to file')
     parser.add_argument('--torrc', action='store_true', dest='torrc_fmt', help='Output reachable relays in torrc format (with "Bridge" prefix)')
