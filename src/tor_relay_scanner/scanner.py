@@ -168,7 +168,7 @@ async def main_async(args):
                     relays_new.append(relay_copy)
         relays = relays_new
         if not relays:
-            print("There are no relays within specified port number constrains!", file=sys.stderr)
+            print("There are no relays within specified port number constraints!", file=sys.stderr)
             print("Try changing port numbers.", file=sys.stderr)
             return 2
 
