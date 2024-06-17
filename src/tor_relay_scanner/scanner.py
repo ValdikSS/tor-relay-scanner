@@ -124,7 +124,7 @@ def start_browser():
 
 
 def str_list_with_prefix(prefix, list_):
-    return "\n".join([prefix + r for r in list_])
+    return "\n".join(prefix + r for r in list_)
 
 
 async def main_async(args):
