@@ -190,7 +190,7 @@ async def main_async(args):
             f"\nTry {ntry+1}/{numtries}, We'll test the following {relaynum} random relays:", file=sys.stderr)
         for relay in test_relays:
             print(relay, file=sys.stderr)
-        print("", file=sys.stderr)
+        print(file=sys.stderr)
 
         if ntry:
             print(f"Found {len(working_relays)} good relays so far. Test {ntry+1}/{numtries} started…", file=sys.stderr)
@@ -201,7 +201,7 @@ async def main_async(args):
         for relay in test_relays:
             tasks.append(asyncio.create_task(relay.check(TIMEOUT)))
         fin = await asyncio.gather(*tasks)
-        print("", file=sys.stderr)
+        print(file=sys.stderr)
 
         print("The following relays are reachable this try:", file=sys.stderr)
         for relay in test_relays:
@@ -214,7 +214,7 @@ async def main_async(args):
             print("No relays are reachable this try.", file=sys.stderr)
 
     if ntry > 1:
-        print("", file=sys.stderr)
+        print(file=sys.stderr)
         print("All reachable relays:", file=sys.stderr)
         for relay in working_relays:
             if relay:
