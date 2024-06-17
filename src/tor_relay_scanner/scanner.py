@@ -127,6 +127,11 @@ def str_list_with_prefix(prefix, list_):
     return "\n".join(prefix + r for r in list_)
 
 
+def chunked_list(l, size):
+    for i in range(0, len(l), size):
+        yield l[i:i+size]
+
+
 async def main_async(args):
     NUM_RELAYS = args.num_relays
     WORKING_RELAY_NUM_GOAL = args.working_relay_num_goal
@@ -173,29 +178,22 @@ async def main_async(args):
             return 2
 
     working_relays = list()
-    ntry = 0
-    relaypos = 0
     numtries = round(len(relays) / NUM_RELAYS)
-    for ntry in range(numtries):
+    for ntry, chunk in enumerate(chunked_list(relays, NUM_RELAYS)):
         if len(working_relays) >= WORKING_RELAY_NUM_GOAL:
             break
 
-        relaynum = min(NUM_RELAYS, len(relays) - relaypos - 1)
-        test_relays = [TorRelay(relays[x])
-                       for x in range(relaypos, relaypos+relaynum)]
-        relaypos += NUM_RELAYS
-
-        if not test_relays:
-            break
+        relaynum = len(chunk)
+        test_relays = [TorRelay(r) for r in chunk]
 
         print(
-            f"\nTry {ntry}/{numtries}, We'll test the following {NUM_RELAYS} random relays:", file=sys.stderr)
+            f"\nTry {ntry+1}/{numtries}, We'll test the following {relaynum} random relays:", file=sys.stderr)
         for relay in test_relays:
             print(relay, file=sys.stderr)
         print("", file=sys.stderr)
 
         if ntry:
-            print(f"Found {len(working_relays)} good relays so far. Test {ntry}/{numtries} started…", file=sys.stderr)
+            print(f"Found {len(working_relays)} good relays so far. Test {ntry+1}/{numtries} started…", file=sys.stderr)
         else:
             print(f"Test started…", file=sys.stderr)
 
