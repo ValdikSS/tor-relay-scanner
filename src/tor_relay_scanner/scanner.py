@@ -178,7 +178,7 @@ async def main_async(args):
             return 2
 
     working_relays = list()
-    numtries = round(len(relays) / NUM_RELAYS)
+    numtries = (len(relays) + NUM_RELAYS - 1) // NUM_RELAYS
     for ntry, chunk in enumerate(chunked_list(relays, NUM_RELAYS)):
         if len(working_relays) >= WORKING_RELAY_NUM_GOAL:
             break
