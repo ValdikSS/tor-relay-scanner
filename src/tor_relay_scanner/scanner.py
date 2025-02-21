@@ -249,13 +249,13 @@ async def main_async(args):
 
 def main():
     parser = argparse.ArgumentParser(description=DESCRIPTION)
-    parser.add_argument('-n', type=int, dest='num_relays', default=30, help='The number of concurrent relays tested.')
-    parser.add_argument('-g', '--goal', type=int, dest='working_relay_num_goal', default=5, help='Test until at least this number of working relays are found')
+    parser.add_argument('-n', type=int, dest='num_relays', default=30, help='The number of concurrent relays tested (default: %(default)s)')
+    parser.add_argument('-g', '--goal', type=int, dest='working_relay_num_goal', default=5, help='Test until at least this number of working relays are found (default: %(default)s)')
     parser.add_argument('-c', '--preferred-country', type=str, default="", help='Preferred country list, comma-separated. Example: se,gb,nl,de')
-    parser.add_argument('--timeout', type=float, default=10.0, help='Socket connection timeout')
+    parser.add_argument('--timeout', type=float, default=10.0, help='Socket connection timeout (default: %(default)s)')
     parser.add_argument('-o', '--outfile', type=argparse.FileType('w'), default=sys.stdout, help='Output reachable relays to file')
     parser.add_argument('--torrc', action='store_true', dest='torrc_fmt', help='Output reachable relays in torrc format (with "Bridge" prefix)')
-    parser.add_argument('--proxy', type=str, help='Set proxy for onionoo information download. Format: http://user:pass@host:port; socks5h://user:pass@host:port')
+    parser.add_argument('--proxy', type=str, help='Set proxy for onionoo information download (not for scan). Format: http://user:pass@host:port; socks5h://user:pass@host:port')
     parser.add_argument('--url', type=str, action='append', help='Preferred alternative URL for onionoo relay list. Could be used multiple times.')
     parser.add_argument('-p', type=int, dest='port', action='append', help='Scan for relays running on specified port number. Could be used multiple times.')
     parser.add_argument('--browser', type=str, nargs='?', metavar='/path/to/prefs.js', dest='prefsjs',
