@@ -17,7 +17,7 @@ jobs:
     name: Build Python pyz file
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Declare short commit variable
         id: vars
@@ -30,7 +30,7 @@ jobs:
           mv torparse.pyz tor-relay-scanner-${{ steps.vars.outputs.sha_short }}.pyz
 
       - name: Upload output file x86
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tor-relay-scanner-${{ steps.vars.outputs.sha_short }}.pyz
           path: tor-relay-scanner-${{ steps.vars.outputs.sha_short }}.pyz
@@ -39,7 +39,7 @@ jobs:
     name: Build Windows exe file
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Declare short commit variable
         id: vars
@@ -59,7 +59,7 @@ jobs:
 
       - name: Download Python from cache
         id: python-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{ env. PYTHON_NAME }}
           key: ${{ env. PYTHON_SHA256 }}
@@ -82,7 +82,7 @@ jobs:
           mv dist/__main__.exe tor-relay-scanner-${{ steps.vars.outputs.sha_short }}.exe
 
       - name: Upload output file
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tor-relay-scanner-${{ steps.vars.outputs.sha_short }}.exe
           path: tor-relay-scanner-${{ steps.vars.outputs.sha_short }}.exe
