@@ -188,7 +188,7 @@ async def main_async(args):
         test_relays = [TorRelay(r) for r in chunk]
 
         print(
-            f"\nTry {ntry+1}/{numtries}, We'll test the following {relaynum} random relays:", file=sys.stderr)
+            f"\nAttempt {ntry+1}/{numtries}, We'll test the following {relaynum} random relays:", file=sys.stderr)
         for relay in test_relays:
             print(relay, file=sys.stderr)
         print(file=sys.stderr)
@@ -204,7 +204,7 @@ async def main_async(args):
         fin = await asyncio.gather(*tasks)
         print(file=sys.stderr)
 
-        print("The following relays are reachable this try:", file=sys.stderr)
+        print("The following relays are reachable this test attempt:", file=sys.stderr)
         for relay in test_relays:
             if relay:
                 print(str_list_with_prefix(BRIDGE_PREFIX, relay.reachables()), file=outstream)
@@ -212,7 +212,7 @@ async def main_async(args):
                     print(str_list_with_prefix(BRIDGE_PREFIX, relay.reachables()), file=sys.stderr)
                 working_relays.append(relay)
         if not any(test_relays):
-            print("No relays are reachable this try.", file=sys.stderr)
+            print("No relays are reachable this test attempt.", file=sys.stderr)
 
     if ntry > 1:
         print(file=sys.stderr)
