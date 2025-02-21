@@ -153,8 +153,25 @@ async def main_async(args):
 
     if args.preferred_country:
         countries = {}
+        exclude_countries = {}
+        only_countries = {}
         for i, c in enumerate(args.preferred_country.split(",")):
-            countries[c] = i
+            if c.startswith('!'):   # exclusive countries, include only it
+                only_countries[c.lstrip('!')] = True
+
+            if c.startswith('-'):   # excluded countries
+                exclude_countries[c.lstrip('-')] = False
+            else:
+                # sorted countries,
+                # only_countries also fall-thru here for sorting purposes
+                countries[c.lstrip('!')] = i
+
+        if only_countries:
+            relays = filter(lambda x: only_countries.get(x.get("country"), False), relays)
+            if exclude_countries or len(countries) != len(only_countries):
+                print("Warning: you've set exclusive country(ies) with other sorted or excluded countries, using only exclusive list!", file=sys.stderr)
+        if exclude_countries:
+            relays = filter(lambda x: exclude_countries.get(x.get("country"), True), relays)
         # 1000 is just a sufficiently large number for default sorting
         relays = sorted(relays, key=lambda x: countries.get(x.get("country"), 1000))
 
@@ -255,7 +272,7 @@ def main():
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument('-n', type=int, dest='num_relays', default=30, help='The number of concurrent relays tested (default: %(default)s)')
     parser.add_argument('-g', '--goal', type=int, dest='working_relay_num_goal', default=5, help='Test until at least this number of working relays are found (default: %(default)s)')
-    parser.add_argument('-c', '--preferred-country', type=str, default="", help='Preferred country list, comma-separated. Example: se,gb,nl,de')
+    parser.add_argument('-c', '--preferred-country', type=str, default="", help='Preferred/excluded/exclusive country list, comma-separated. Use "-" prefix to exclude the country, "!" to use only selected country. Example: se,gb,nl,-us,-de. Example for exclusive countries: !us,!tr')
     parser.add_argument('--timeout', type=float, default=10.0, help='Socket connection timeout (default: %(default)s)')
     parser.add_argument('-o', '--outfile', type=argparse.FileType('w'), default=sys.stdout, help='Output reachable relays to file')
     parser.add_argument('--torrc', action='store_true', dest='torrc_fmt', help='Output reachable relays in torrc format (with "Bridge" prefix)')
