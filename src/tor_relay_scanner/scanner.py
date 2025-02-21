@@ -179,6 +179,7 @@ async def main_async(args):
 
     working_relays = list()
     numtries = (len(relays) + NUM_RELAYS - 1) // NUM_RELAYS
+    ntry = -1
     for ntry, chunk in enumerate(chunked_list(relays, NUM_RELAYS)):
         if len(working_relays) >= WORKING_RELAY_NUM_GOAL:
             break
@@ -221,6 +222,9 @@ async def main_async(args):
                 print(str_list_with_prefix(BRIDGE_PREFIX, relay.reachables()), file=sys.stderr)
         if not any(working_relays):
             print("No relays are reachable, at all.", file=sys.stderr)
+    elif ntry == -1:
+        print("No relays selected, nothing to test. Check your preferred-country filter and other settings.",
+              file=sys.stderr)
 
     if any(working_relays):
         if torrc_fmt:
