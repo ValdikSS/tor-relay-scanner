@@ -11,10 +11,10 @@ Works on Windows and Linux. Not tested on macOS.
 
 1. Download latest version from [Releases](https://github.com/ValdikSS/tor-relay-scanner/releases) page.
 2. Put the file into Tor Browser's directory.
-3. **(Windows)**: Create a shortcut (link) to the file and append the following command line in shortcut settings: `-g 1 --timeout 3 --browser --start-browser`  
-   **(Linux)** : Create a shortcut to the file, launching it using `python3`, and append the following arguments: `-g 1 --timeout 3 --browser --start-browser`.  
+3. **(Windows)**: Create a shortcut (link) to the file and append the following command line in shortcut settings: `-g 2 --timeout 3 --browser --start-browser`  
+   **(Linux)** : Create a shortcut to the file, launching it using `python3`, and append the following arguments: `-g 2 --timeout 3 --browser --start-browser`.  
    The quick way to do this is to create a script with the following command:  
-   `echo -e '#!/bin/sh\nexec python3' ./tor-relay-scanner-*.pyz '-g 1 --timeout 3 --browser --start-browser' > run.sh && chmod +x run.sh`
+   `echo -e '#!/bin/sh\nexec python3' ./tor-relay-scanner-*.pyz '-g 2 --timeout 3 --browser --start-browser' > run.sh && chmod +x run.sh`
 4. From now on, launch Tor Browser using the shortcut you've created in step 3. It will scan for reachable Relays, add it to Tor Browser configuration file (prefs.js), and launch the browser.
 
 
