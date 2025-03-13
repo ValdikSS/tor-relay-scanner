@@ -140,6 +140,11 @@ async def main_async(args):
     torrc_fmt = args.torrc_fmt
     BRIDGE_PREFIX = "Bridge " if torrc_fmt else ""
 
+    if args.prefsjs:
+        if not os.path.isfile(args.prefsjs):
+            print("Error: the --browser {} file does not exist!".format(args.prefsjs), file=sys.stderr)
+            return 3
+
     print(f"Tor Relay Scanner. Will scan up to {WORKING_RELAY_NUM_GOAL}" +
           " working relays (or till the end)", file=sys.stderr)
     print("Downloading Tor Relay information from Tor Metrics…", file=sys.stderr)
