@@ -15,7 +15,7 @@ env:
 jobs:
   build_linux:
     name: Build Python pyz file
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -37,7 +37,7 @@ jobs:
 
   build_windows:
     name: Build Windows exe file
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
