@@ -269,6 +269,8 @@ async def main_async(args):
             except OSError as e:
                 print("Can't open Tor Browser configuration:", e, file=sys.stderr)
 
+    outstream.close()
+
     if args.start_browser:
         start_browser()
 
