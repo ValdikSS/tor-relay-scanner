@@ -48,7 +48,6 @@ jobs:
 
       - name: Install Wine
         run: >
-          sudo rm /var/lib/man-db/auto-update &&
           sudo sed -i 's/yes/no/g' /etc/initramfs-tools/update-initramfs.conf &&
           sudo apt-add-repository -y ppa:ondrej/php &&
           sudo eatmydata apt install ppa-purge &&
