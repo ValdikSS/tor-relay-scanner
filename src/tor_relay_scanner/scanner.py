@@ -8,6 +8,7 @@ import urllib.parse
 import argparse
 import subprocess
 import os.path
+import json
 import requests
 
 DESCRIPTION = "Downloads all Tor Relay IP addresses from onionoo.torproject.org and checks whether random Relays are available."
@@ -77,9 +78,28 @@ class TCPSocketConnectChecker:
 
 
 class TorRelayGrabber:
-    def __init__(self, timeout=10.0, proxy=None):
+    def __init__(self, timeout=10.0, proxy=None,
+                 inputrelayfile=None, outputrelayfile=None,
+                 relayfile_fallback=False):
         self.timeout = timeout
         self.proxy = {'https': proxy} if proxy else None
+        self.inputrelayfile = inputrelayfile
+        self.outputrelayfile = outputrelayfile
+        self.relayfile_fallback = relayfile_fallback
+
+    def _grab_file(self, inputfile):
+        with open(inputfile, "r") as f:
+            return json.loads(f.read())
+
+    def _save_to_file(self, relaydata, outputfile):
+        try:
+            with open(outputfile, "w") as f:
+                f.write(json.dumps(relaydata))
+            return True
+        except (ValueError, OSError) as e:
+            print("Can't save Relay data to file: {}".format(repr(e)),
+                    file=sys.stderr)
+        return False
 
     def _grab(self, url):
         with requests.get(url, timeout=int(self.timeout), proxies=self.proxy) as r:
@@ -96,13 +116,25 @@ class TorRelayGrabber:
             for pref_url in preferred_urls_list:
                 URLS.insert(0, pref_url)
 
+        if self.inputrelayfile and not self.relayfile_fallback:
+            # Loading relay data from a file, no network involved
+            return self._grab_file(self.inputrelayfile)
+
         for url in URLS:
             try:
-                return self._grab(url)
+                r = self._grab(url)
+                if r:
+                    if self.outputrelayfile:
+                        self._save_to_file(r, self.outputrelayfile)
+                    return r
             except Exception as e:
                 print("Can't download Tor Relay data from/via {}: {}".format(
-                    urllib.parse.urlparse(url).hostname, e
+                    urllib.parse.urlparse(url).hostname, repr(e)
                 ), file=sys.stderr)
+
+        if self.inputrelayfile and self.relayfile_fallback:
+            # Fallback to relay data from a file
+            return self._grab_file(self.inputrelayfile)
 
     def grab_parse(self, preferred_urls_list=None):
         grabbed = self.grab(preferred_urls_list)
@@ -187,7 +219,10 @@ async def main_async(args):
     print(f"Tor Relay Scanner. Will scan up to {WORKING_RELAY_NUM_GOAL}" +
           " working relays (or till the end)", file=sys.stderr)
     print("Downloading Tor Relay information from Tor Metrics…", file=sys.stderr)
-    relays = TorRelayGrabber(timeout=TIMEOUT, proxy=args.proxy).grab_parse(args.url)
+    relays = TorRelayGrabber(timeout=TIMEOUT, proxy=args.proxy,
+                             inputrelayfile=args.inputrelayfile,
+                             outputrelayfile=args.outputrelayfile,
+                             relayfile_fallback=args.relay_infile_fallback).grab_parse(args.url)
     if not relays:
         print("Tor Relay information can't be downloaded!", file=sys.stderr)
         return 1
@@ -325,6 +360,9 @@ def main():
     parser.add_argument('--torrc', action='store_true', dest='torrc_fmt', help='Output reachable relays in torrc format (with "Bridge" prefix)')
     parser.add_argument('--proxy', type=str, help='Set proxy for onionoo information download (not for scan). Format: http://user:pass@host:port; socks5h://user:pass@host:port')
     parser.add_argument('--url', type=str, action='append', help='Preferred alternative URL for onionoo relay list. Could be used multiple times.')
+    parser.add_argument('--relay-infile', dest='inputrelayfile', type=str, default="", help='Load relays from the file, do not download from the network')
+    parser.add_argument('--relay-infile-fallback', action='store_true', help='Prefer relays from the network, fallback to --relay-infile when all network sources failed')
+    parser.add_argument('--relay-outfile', dest='outputrelayfile', type=str, default="", help='Save relays downloaded from the network to the file')
     parser.add_argument('-p', type=int, dest='port', action='append', help='Scan for relays running on specified port number. Could be used multiple times.')
     parser.add_argument('--browser', type=str, nargs='?', metavar='/path/to/prefs.js', dest='prefsjs',
                         const='Browser/TorBrowser/Data/Browser/profile.default/prefs.js',
