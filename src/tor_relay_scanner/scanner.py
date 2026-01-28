@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import asyncio
+import time
 import random
 import sys
 import ssl
@@ -38,6 +39,16 @@ class TCPSocketConnectChecker:
 
         return "www." + ''.join(hostname) + ".org"
 
+    async def wait_with_timeout(self, *args, **kwargs):
+        if self.timeout < 0:
+            raise asyncio.TimeoutError
+
+        time_start = time.time()
+        result = await asyncio.wait_for(*args, **kwargs, timeout=self.timeout)
+        time_diff = time.time() - time_start
+        self.timeout -= time_diff
+        return result
+
     async def connect(self):
         TOR_HANDSHAKE_VERSIONS = b"\x00\x00\x07\x00\x06\x00\x03\x00\x04\x00\x05"
         TOR_NETINFO = b"\x00\x00\x00\x01\x08\x67\x9A\xBC\xDE\x04\x04\xC0\xA8\x01\x64\x01\x04\x04\xC0\xA8\x01\x64" + b"\x00" * 492
@@ -54,17 +65,17 @@ class TCPSocketConnectChecker:
                 ssl_ctx.check_hostname = False
                 ssl_ctx.verify_mode = ssl.CERT_NONE
             # Open connection
-            reader, writer = await asyncio.wait_for(
+            reader, writer = await self.wait_with_timeout(
                 asyncio.open_connection(self.host, self.port,
                                         ssl=ssl_ctx,
                                         ssl_handshake_timeout=ssl_handshake_timeout,
-                                        server_hostname=server_hostname),
-                self.timeout)
+                                        server_hostname=server_hostname))
+
 
             if self.check_ssl:
                 writer.write(TOR_HANDSHAKE_VERSIONS)
-                await writer.drain()
-                readdata = await asyncio.wait_for(reader.read(64*1024), timeout=self.timeout)
+                await self.wait_with_timeout(writer.drain())
+                readdata = await self.wait_with_timeout(reader.read(8192))
                 if len(readdata) and readdata[0:3] == TOR_HANDSHAKE_VERSIONS[0:3]:
                     if not self.check_ssl_num_data:
                         self.connection_status = True
@@ -72,13 +83,13 @@ class TCPSocketConnectChecker:
                         writer.write(TOR_NETINFO)
                         for _ in range(self.check_ssl_num_data):
                             writer.write(TOR_BOGUS_CREATE)
-                            await writer.drain()
-                            readdata = await asyncio.wait_for(reader.read(64*1024), timeout=self.timeout)
+                            await self.wait_with_timeout(writer.drain())
+                            readdata = await self.wait_with_timeout(reader.read(8192))
                         if len(readdata) and readdata[0:5] == TOR_BOGUS_CREATE[0:4] + b"\x04":
                             self.connection_status = True
 
             writer.close()
-            await writer.wait_closed()
+            await self.wait_with_timeout(writer.wait_closed())
 
             if self.check_ssl:
                 if self.connection_status:
