@@ -203,13 +203,17 @@ class TorRelay:
 
     async def check(self, timeout=10.0,
                     check_ssl=False, check_ssl_num_data=0):
+        tasks = list()
         for i in self.iptuples:
             s = TCPSocketConnectChecker(i[0], i[1], timeout=timeout,
                                         check_ssl=check_ssl,
                                         check_ssl_num_data=check_ssl_num_data)
-            sc = await s.connect()
-            if sc[0]:
-                self.reachable.append(i)
+            tasks.append(s.connect())
+
+        fin = await asyncio.gather(*tasks)
+        for i, v in enumerate(self.iptuples):
+            if fin[i][0]:
+                self.reachable.append(v)
 
         return bool(self.reachable)
 
