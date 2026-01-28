@@ -15,11 +15,13 @@ DESCRIPTION = "Downloads all Tor Relay IP addresses from onionoo.torproject.org 
 
 
 class TCPSocketConnectChecker:
-    def __init__(self, host, port, timeout=10.0, check_ssl=False):
+    def __init__(self, host, port, timeout=10.0,
+                 check_ssl=False, check_ssl_num_data=8):
         self.host = host
         self.port = port
         self.timeout = timeout
-        self.check_ssl=check_ssl
+        self.check_ssl = check_ssl
+        self.check_ssl_num_data = check_ssl_num_data
         self.connection_status = None
 
     def __repr__(self):
@@ -38,6 +40,8 @@ class TCPSocketConnectChecker:
 
     async def connect(self):
         TOR_HANDSHAKE_VERSIONS = b"\x00\x00\x07\x00\x06\x00\x03\x00\x04\x00\x05"
+        TOR_NETINFO = b"\x00\x00\x00\x01\x08\x67\x9A\xBC\xDE\x04\x04\xC0\xA8\x01\x64\x01\x04\x04\xC0\xA8\x01\x64" + b"\x00" * 492
+        TOR_BOGUS_CREATE = b"\x00\x00\x00\x05\x01" + b"\x00" * 509
 
         try:
             ssl_ctx = None
@@ -60,14 +64,24 @@ class TCPSocketConnectChecker:
             if self.check_ssl:
                 writer.write(TOR_HANDSHAKE_VERSIONS)
                 await writer.drain()
-                readdata = await asyncio.wait_for(reader.read(3), timeout=self.timeout)
+                readdata = await asyncio.wait_for(reader.read(64*1024), timeout=self.timeout)
+                if len(readdata) and readdata[0:3] == TOR_HANDSHAKE_VERSIONS[0:3]:
+                    if not self.check_ssl_num_data:
+                        self.connection_status = True
+                    else:
+                        writer.write(TOR_NETINFO)
+                        for _ in range(self.check_ssl_num_data):
+                            writer.write(TOR_BOGUS_CREATE)
+                            await writer.drain()
+                            readdata = await asyncio.wait_for(reader.read(64*1024), timeout=self.timeout)
+                        if len(readdata) and readdata[0:5] == TOR_BOGUS_CREATE[0:4] + b"\x04":
+                            self.connection_status = True
 
             writer.close()
             await writer.wait_closed()
 
             if self.check_ssl:
-                if len(readdata) and readdata[0:3] == TOR_HANDSHAKE_VERSIONS[0:3]:
-                    self.connection_status = True
+                if self.connection_status:
                     return (True, None)
                 return (False, None)
 
@@ -176,9 +190,12 @@ class TorRelay:
             ret.append((parsed.hostname, parsed.port))
         return ret
 
-    async def check(self, timeout=10.0, check_ssl=False):
+    async def check(self, timeout=10.0,
+                    check_ssl=False, check_ssl_num_data=0):
         for i in self.iptuples:
-            s = TCPSocketConnectChecker(i[0], i[1], timeout=timeout, check_ssl=check_ssl)
+            s = TCPSocketConnectChecker(i[0], i[1], timeout=timeout,
+                                        check_ssl=check_ssl,
+                                        check_ssl_num_data=check_ssl_num_data)
             sc = await s.connect()
             if sc[0]:
                 self.reachable.append(i)
@@ -296,7 +313,9 @@ async def main_async(args):
 
         tasks = list()
         for relay in test_relays:
-            tasks.append(asyncio.create_task(relay.check(TIMEOUT, check_ssl=args.use_ssl)))
+            tasks.append(asyncio.create_task(relay.check(TIMEOUT,
+                                                         check_ssl=args.use_ssl,
+                                                         check_ssl_num_data=args.ssl_num)))
         fin = await asyncio.gather(*tasks)
         print(file=sys.stderr)
 
@@ -355,6 +374,7 @@ def main():
     parser.add_argument('-g', '--goal', type=int, dest='working_relay_num_goal', default=5, help='Test until at least this number of working relays are found (default: %(default)s)')
     parser.add_argument('-c', '--preferred-country', type=str, default="", help='Preferred/excluded/exclusive country list, comma-separated. Use "-" prefix to exclude the country, "!" to use only selected country. Example: se,gb,nl,-us,-de. Example for exclusive countries: !us,!tr')
     parser.add_argument('-s', '--ssl', action='store_true', dest='use_ssl', help='Simulate Tor SSL/TLS handshake and negotiate Tor protocol VERSIONS packet')
+    parser.add_argument('--ssl-data-amount', type=int, dest='ssl_num', default=8, help='Try to create Tor Circuit n times (≈514 bytes exchange each)')
     parser.add_argument('--timeout', type=float, default=10.0, help='Socket connection timeout (default: %(default)s)')
     parser.add_argument('-o', '--outfile', type=argparse.FileType('w'), default=sys.stdout, help='Output reachable relays to file')
     parser.add_argument('--torrc', action='store_true', dest='torrc_fmt', help='Output reachable relays in torrc format (with "Bridge" prefix)')
