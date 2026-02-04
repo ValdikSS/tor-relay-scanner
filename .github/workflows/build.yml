@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
 
 env:
-  PYTHON_URL: https://www.python.org/ftp/python/3.8.10/python-3.8.10.exe
-  PYTHON_NAME: python-3.8.10.exe
-  PYTHON_SHA256: ad07633a1f0cd795f3bf9da33729f662281df196b4567fa795829f3bb38a30ac
+  PYTHON_URL: https://github.com/Alex313031/Python-Win7/raw/refs/heads/master/3.12.12/python-3.12.12-full.exe
+  PYTHON_NAME: python-3.12.12-full.exe
+  PYTHON_SHA256: f4276c2245d762042f9f5dc7b3099c7e9c5a9a8174e8ee49d49ca40c23cb63d5
   WINEARCH: win32
 
 jobs:
