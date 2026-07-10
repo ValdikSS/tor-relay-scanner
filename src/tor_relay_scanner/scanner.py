@@ -157,7 +157,7 @@ class TorRelayGrabber:
                     if self.outputrelayfile:
                         self._save_to_file(r, self.outputrelayfile)
                     return r
-            except Exception as e:
+            except (requests.exceptions.RequestException, ConnectionError, ValueError, OSError) as e:
                 print("Can't download Tor Relay data from/via {}: {}".format(
                     urllib.parse.urlparse(url).hostname, repr(e)
                 ), file=sys.stderr)
@@ -313,41 +313,46 @@ async def main_async(args):
     working_relays = list()
     numtries = (len(relays) + NUM_RELAYS - 1) // NUM_RELAYS
     ntry = -1
-    for ntry, chunk in enumerate(chunked_list(relays, NUM_RELAYS)):
-        if len(working_relays) >= WORKING_RELAY_NUM_GOAL:
-            break
+    try:
+        for ntry, chunk in enumerate(chunked_list(relays, NUM_RELAYS)):
+            if len(working_relays) >= WORKING_RELAY_NUM_GOAL:
+                break
 
-        relaynum = len(chunk)
-        test_relays = [TorRelay(r) for r in chunk]
+            relaynum = len(chunk)
+            test_relays = [TorRelay(r) for r in chunk]
 
-        print(
-            f"\nAttempt {ntry+1}/{numtries}, We'll test the following {relaynum} random relays:", file=sys.stderr)
-        for relay in test_relays:
-            print(relay, file=sys.stderr)
-        print(file=sys.stderr)
+            print(
+                f"\nAttempt {ntry+1}/{numtries}, We'll test the following {relaynum} random relays:", file=sys.stderr)
+            for relay in test_relays:
+                print(relay, file=sys.stderr)
+            print(file=sys.stderr)
 
-        if ntry:
-            print(f"Found {len(working_relays)} good relays so far. Test {ntry+1}/{numtries} started…", file=sys.stderr)
-        else:
-            print(f"Test started…", file=sys.stderr)
+            if ntry:
+                print(f"Found {len(working_relays)} good relays so far. Test {ntry+1}/{numtries} started…", file=sys.stderr)
+            else:
+                print(f"Test started…", file=sys.stderr)
 
-        tasks = list()
-        for relay in test_relays:
-            tasks.append(asyncio.create_task(relay.check(TIMEOUT,
-                                                         check_ssl=args.use_ssl,
-                                                         check_ssl_num_data=args.ssl_num)))
-        fin = await asyncio.gather(*tasks)
-        print(file=sys.stderr)
+            tasks = list()
+            for relay in test_relays:
+                tasks.append(asyncio.create_task(relay.check(TIMEOUT,
+                                                            check_ssl=args.use_ssl,
+                                                            check_ssl_num_data=args.ssl_num)))
+            print("@@@", file=sys.stderr)
+            fin = await asyncio.gather(*tasks)
+            print("###", file=sys.stderr)
+            print(file=sys.stderr)
 
-        print("The following relays are reachable this test attempt:", file=sys.stderr)
-        for relay in test_relays:
-            if relay:
-                print(str_list_with_prefix(BRIDGE_PREFIX, relay.reachables()), file=outstream)
-                if sys.stdout != outstream:
-                    print(str_list_with_prefix(BRIDGE_PREFIX, relay.reachables()), file=sys.stderr)
-                working_relays.append(relay)
-        if not any(test_relays):
-            print("No relays are reachable this test attempt.", file=sys.stderr)
+            print("The following relays are reachable this test attempt:", file=sys.stderr)
+            for relay in test_relays:
+                if relay:
+                    print(str_list_with_prefix(BRIDGE_PREFIX, relay.reachables()), file=outstream)
+                    if sys.stdout != outstream:
+                        print(str_list_with_prefix(BRIDGE_PREFIX, relay.reachables()), file=sys.stderr)
+                    working_relays.append(relay)
+            if not any(test_relays):
+                print("No relays are reachable this test attempt.", file=sys.stderr)
+    except (asyncio.CancelledError, Exception):
+        print("SCAN INTERRUPTED. Saving the results.", file=sys.stderr)
 
     if ntry > 1:
         print(file=sys.stderr)
@@ -409,7 +414,5 @@ def main():
                         help='Install found relays into Tor Browser configuration file (prefs.js)')
     parser.add_argument('--start-browser', action='store_true', help='Launch browser after scanning')
     args = parser.parse_args()
-    try:
-        return asyncio.run(main_async(args))
-    except (KeyboardInterrupt, SystemExit):
-        pass
+
+    return asyncio.run(main_async(args))
