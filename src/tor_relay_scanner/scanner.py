@@ -54,6 +54,7 @@ class TCPSocketConnectChecker:
         TOR_NETINFO = b"\x00\x00\x00\x01\x08\x67\x9A\xBC\xDE\x04\x04\xC0\xA8\x01\x64\x01\x04\x04\xC0\xA8\x01\x64" + b"\x00" * 492
         TOR_BOGUS_CREATE = b"\x00\x00\x00\x05\x01" + b"\x00" * 509
 
+        connection_needs_close = False
         try:
             ssl_ctx = None
             server_hostname = None
@@ -70,6 +71,7 @@ class TCPSocketConnectChecker:
                                         ssl=ssl_ctx,
                                         ssl_handshake_timeout=ssl_handshake_timeout,
                                         server_hostname=server_hostname))
+            connection_needs_close = True
 
 
             if self.check_ssl:
@@ -100,6 +102,9 @@ class TCPSocketConnectChecker:
         except (OSError, asyncio.TimeoutError) as e:
             self.connection_status = False
             return (False, e)
+        finally:
+            if connection_needs_close:
+                writer.close()
 
 
 class TorRelayGrabber:
