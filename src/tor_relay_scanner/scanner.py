@@ -337,9 +337,7 @@ async def main_async(args):
                 tasks.append(asyncio.create_task(relay.check(TIMEOUT,
                                                             check_ssl=args.use_ssl,
                                                             check_ssl_num_data=args.ssl_num)))
-            print("@@@", file=sys.stderr)
             fin = await asyncio.gather(*tasks)
-            print("###", file=sys.stderr)
             print(file=sys.stderr)
 
             print("The following relays are reachable this test attempt:", file=sys.stderr)
