@@ -174,11 +174,12 @@ class TorRelayGrabber:
 
 
 class TorRelay:
-    def __init__(self, relayinfo):
+    def __init__(self, relayinfo, ip_version='both'):
         self.relayinfo = relayinfo
         self.fingerprint = relayinfo["fingerprint"]
-        self.iptuples = self._parse_or_addresses(relayinfo["or_addresses"])
+        self.iptuples = self._parse_or_addresses(relayinfo["or_addresses"], ip_version)
         self.reachable = list()
+        self.ip_version = ip_version
 
     def reachables(self):
         r = list()
@@ -199,11 +200,29 @@ class TorRelay:
     def __len__(self):
         return len(self.reachable)
 
-    def _parse_or_addresses(self, or_addresses):
+    def _parse_or_addresses(self, or_addresses, ip_version='both'):
         ret = list()
         for address in or_addresses:
             parsed = urllib.parse.urlparse("//" + address)
-            ret.append((parsed.hostname, parsed.port))
+            hostname = parsed.hostname
+            
+            # Check if this is an IPv6 address
+            is_ipv6 = False
+            if hostname and ':' in hostname:
+                # More robust IPv6 detection
+                if hostname.startswith('[') and hostname.endswith(']'):
+                    is_ipv6 = True
+                elif hostname.count(':') >= 2:
+                    is_ipv6 = True
+            
+            # Filter based on ip_version parameter
+            if ip_version == 'ipv4' and is_ipv6:
+                continue
+            if ip_version == 'ipv6' and not is_ipv6:
+                continue
+            # For 'both', include all addresses
+            
+            ret.append((hostname, parsed.port))
         return ret
 
     async def check(self, timeout=10.0,
@@ -248,6 +267,9 @@ async def main_async(args):
     torrc_fmt = args.torrc_fmt
     BRIDGE_PREFIX = "Bridge " if torrc_fmt else ""
 
+    # Determine IP version filter
+    ip_version = args.ip_version if hasattr(args, 'ip_version') else 'both'
+
     if args.prefsjs:
         if not os.path.isfile(args.prefsjs):
             print("Error: the --browser {} file does not exist!".format(args.prefsjs), file=sys.stderr)
@@ -255,6 +277,7 @@ async def main_async(args):
 
     print(f"Tor Relay Scanner. Will scan up to {WORKING_RELAY_NUM_GOAL}" +
           " working relays (or till the end)", file=sys.stderr)
+    print(f"IP version filter: {ip_version}", file=sys.stderr)
     print("Downloading Tor Relay information from Tor Metrics…", file=sys.stderr)
     relays = TorRelayGrabber(timeout=TIMEOUT, proxy=args.proxy,
                              inputrelayfile=args.inputrelayfile,
@@ -294,11 +317,14 @@ async def main_async(args):
     if args.port:
         relays_new = list()
         for relay in relays:
-            for ipport in TorRelay(relay).iptuples:
+            # Create temporary TorRelay to check ports with current IP filter
+            temp_relay = TorRelay(relay, ip_version)
+            for ipport in temp_relay.iptuples:
                 if ipport[1] in args.port:
                     # deep copy needed here, otherwise subsequent loop
                     # modifies "previous" value
                     relay_copy = relay.copy()
+                    # Keep only the matching address
                     relay_copy["or_addresses"] = ["{}:{}".format(
                         ipport[0] if ipport[0].find(":") == -1 else "[" + ipport[0] + "]",
                         ipport[1])
@@ -319,7 +345,7 @@ async def main_async(args):
                 break
 
             relaynum = len(chunk)
-            test_relays = [TorRelay(r) for r in chunk]
+            test_relays = [TorRelay(r, ip_version) for r in chunk]
 
             print(
                 f"\nAttempt {ntry+1}/{numtries}, We'll test the following {relaynum} random relays:", file=sys.stderr)
@@ -411,6 +437,15 @@ def main():
                         const='Browser/TorBrowser/Data/Browser/profile.default/prefs.js',
                         help='Install found relays into Tor Browser configuration file (prefs.js)')
     parser.add_argument('--start-browser', action='store_true', help='Launch browser after scanning')
+    
+    # NEW: IP version filter argument
+    parser.add_argument('--ip-version', type=str, default='both', choices=['ipv4', 'ipv6', 'both'],
+                        help='Filter relays by IP version: ipv4, ipv6, or both (default: %(default)s)')
+    
     args = parser.parse_args()
 
     return asyncio.run(main_async(args))
+
+
+if __name__ == "__main__":
+    sys.exit(main())
