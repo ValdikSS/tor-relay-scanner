@@ -118,12 +118,12 @@ class TorRelayGrabber:
         self.relayfile_fallback = relayfile_fallback
 
     def _grab_file(self, inputfile):
-        with open(inputfile, "r") as f:
+        with open(inputfile, "r", encoding="utf-8") as f:
             return json.loads(f.read())
 
     def _save_to_file(self, relaydata, outputfile):
         try:
-            with open(outputfile, "w") as f:
+            with open(outputfile, "w", encoding="utf-8") as f:
                 f.write(json.dumps(relaydata))
             return True
         except (ValueError, OSError) as e:
